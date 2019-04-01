@@ -1,0 +1,3 @@
+transcriptId codonChange entrezGeneId consequenceTerms hugoGeneSymbol hgvspShort
+"ENST00000263967" "gTAGGCAACCGTGAa/gGa" "5290" "protein_altering_variant" "PIK3CA" "p.V105_E109delinsG"
+"ENST00000275493" "ctG/ctT" "1956" "splice_region_variant,synonymous_variant" "EGFR" "p.X210_splice"
