@@ -9,7 +9,7 @@ Proof of concept for nodejs implemntation of [genome-nexus-annotation-pipeline](
 
 For example,
 
-`node index.js example.txt `
+`node index.js input.txt `
 
 # Performance
 
@@ -24,3 +24,10 @@ For `large_input.txt` which is like 100 lines of input(I just copied example inp
 ![large_input.txt](https://github.com/thobhanifreddy/gnclc-poc/blob/master/screenshots/large_input.png)
 
 
+# Implementation 
+
+I have implemented [Retrieves VEP annotation for the provided genomic location](https://genomenexus.org/swagger-ui.html#!/annotation45controller/fetchVariantAnnotationByGenomicLocationGET). 
+
+- There are no external libraries used. 
+- I have used ES6.
+- For asyncroniztioin funtions, `async/await` is used. 
