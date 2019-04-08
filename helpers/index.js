@@ -1,6 +1,51 @@
 var fs = require("fs");
 const https = require("https");
 
+var wstream = fs.createWriteStream("result.txt");
+var fields;
+var isHeader = false;
+var i = 0;
+
+batchPromise = (batchSize, thenArr, fn) => {
+  return Promise.resolve(thenArr).then(function(arr) {
+    return arr
+      .map(function(_, i) {
+        return i % batchSize ? [] : arr.slice(i, i + batchSize);
+      })
+      .map(function(group) {
+        return function(res) {
+          return Promise.all(group.map(fn)).then(function(r) {
+            return res.concat(r);
+          });
+        };
+      })
+      .reduce(function(chain, work) {
+        return chain.then(work);
+      }, Promise.resolve([]));
+  });
+};
+storeData = data => {
+  if (!isHeader)
+    fields = Object.keys(data.annotation_summary.transcriptConsequenceSummary);
+  var replacer = function(key, value) {
+    return value === undefined ? "xxxxxx" : value;
+  };
+  let csv = fields.map(fieldName => {
+    return JSON.stringify(
+      data.annotation_summary.transcriptConsequenceSummary[fieldName],
+      replacer
+    );
+  });
+
+  if (!isHeader) {
+    wstream.write(fields.join(" "));
+    isHeader = true;
+  }
+  csv = csv.join(" ");
+  wstream.write("\n");
+  wstream.write(csv);
+};
+
 module.exports = {
   formatData: data => {
     var cells = data.split("\n").map(function(el) {
@@ -19,51 +64,36 @@ module.exports = {
   },
   analyseData: async data => {
     let promiseArray = [];
-    data.forEach(d => {
-      let url = `https://genomenexus.org/annotation/genomic/${d.Chromosome},${
+    urls = data.map(d => {
+      return `https://genomenexus.org/annotation/genomic/${d.Chromosome},${
         d.Start_Position
       },${d.End_Position},${d.Reference_Allele},${
         d.Tumor_Seq_Allele1
       }?isoformOverrideSource=uniprot&fields=annotation_summary`;
-      promiseArray.push(
+    });
+
+    batchPromise(
+      500,
+      urls,
+      url =>
         new Promise((resolve, reject) => {
           https.get(url, (response, err) => {
             if (err) reject(err);
             let bodyChunks = [];
             response
               .on("data", chunks => {
+                i++;
                 bodyChunks.push(chunks);
               })
               .on("end", () => {
                 var body = Buffer.concat(bodyChunks);
+                console.log(i);
                 resolve(body);
               });
           });
         })
-      );
-    });
-    let result = await Promise.all(promiseArray);
-    result = result.map(r => JSON.parse(r))
-    return result;
-  },
-  storeData: data => {
-    var fields = Object.keys(data[0].annotation_summary.transcriptConsequenceSummary);
-    fields = fields.filter((f, i) => i < 6);
-    var replacer = function(key, value) {
-      return value === undefined ? "xxxxxx" : value;
-    };
-    let csv = data.map(row =>
-      fields
-        .map(fieldName => {
-          return JSON.stringify(row.annotation_summary.transcriptConsequenceSummary[fieldName], replacer);
-        })
-        .join(" ")
-    );
-    csv.unshift(fields.join(" ")); // add header column
-    fs.writeFile("./result.txt", csv.join("\r\n"), function(err) {
-      if (err) {
-        return console.log(err);
-      }
+    ).then(results => {
+      results.map(result => storeData(JSON.parse(result)));
     });
   }
 };
