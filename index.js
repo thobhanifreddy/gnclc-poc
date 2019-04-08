@@ -8,7 +8,6 @@ let filename = process.argv[2];
 let formattedData = null;
 let resutData = null;
 
-performance.mark("A");
 fs.readFile(filename, "utf8", async (err, data) => {
   if (err) throw err;
   formattedData = formatData(data);
